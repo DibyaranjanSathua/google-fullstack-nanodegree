@@ -54,7 +54,7 @@ class TriviaTestCase(unittest.TestCase):
         with self.app.app_context():
             question = Question(
                 question="What is your name",
-                answer="Dibya",
+                answer="Renad",
                 category="General",
                 difficulty=1
             )
@@ -90,7 +90,7 @@ class TriviaTestCase(unittest.TestCase):
             self.db.session.commit()
             response = self.client().post('/questions', json={
                 'question': 'Whats your name',
-                'answer': 'Dibya',
+                'answer': 'Renad',
                 'difficulty': 1,
                 'category': '1'
             })
@@ -113,7 +113,7 @@ class TriviaTestCase(unittest.TestCase):
         with self.app.app_context():
             question = Question(
                 question="What is your name",
-                answer="Dibya",
+                answer="Renad",
                 category="General",
                 difficulty=1
             )
@@ -127,7 +127,7 @@ class TriviaTestCase(unittest.TestCase):
         with self.app.app_context():
             question = Question(
                 question="What is your name",
-                answer="Dibya",
+                answer="Renad",
                 category="General",
                 difficulty=1
             )
