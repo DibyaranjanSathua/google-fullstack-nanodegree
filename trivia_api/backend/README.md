@@ -76,7 +76,8 @@ GET '/questions'
 DELETE '/questions'
 POST '/questions'
 POST '/questions/search'
-POST '/categories/<int:category_id>/questions
+POST '/categories/<int:category_id>/questions'
+POST '/quizzes'
 
 
 GET '/categories'
@@ -210,6 +211,14 @@ POST '/categories/<int:category_id>/questions
     ],
     "success": true,
     "total_questions": 1
+}
+
+POST '/quizzes'
+- Play quizes
+- Request Arguments: category: {"type": "Science", "id": "1"}, previous_questions: []
+- Retunrns: {
+    'success': True,
+    'question': Biggest star in universe
 }
 
 ```

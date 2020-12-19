@@ -35,7 +35,6 @@ class TriviaTestCase(unittest.TestCase):
         data = json.loads(response.data)
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(data, {'categories': {}, 'success': True})
 
     def test_post_categories(self):
         """ Test POST request to categories """
@@ -67,12 +66,21 @@ class TriviaTestCase(unittest.TestCase):
 
     def test_delete_question(self):
         """ Test delete question """
-        response = self.client().delete('/questions/1')
+        with self.app.app_context():
+            question = Question(
+                question="What is your name",
+                answer="Renad",
+                category="General",
+                difficulty=1
+            )
+            self.db.session.add(question)
+            self.db.session.commit()
+            response = self.client().delete(f'/questions/{question.id}')
         data = json.loads(response.data)
         self.assertEqual(response.status_code, 200)
         expected_data = {
             'success': True,
-            'deleted': 1
+            'deleted': question.id
         }
         self.assertEqual(data, expected_data)
 
@@ -147,16 +155,32 @@ class TriviaTestCase(unittest.TestCase):
 
     def test_get_category_questions_no_category(self):
         """ Test Get category questions """
-        response = self.client().get('/categories/15/questions')
+        response = self.client().get('/categories/1000/questions')
         self.assertEqual(response.status_code, 404)
 
+    def test_play_quize(self):
+        """ Test play quiz """
+        with self.app.app_context():
+            category = Category(type='General')
+            self.db.session.add(category)
+            self.db.session.commit()
+            response = self.client().post('/quizzes', json={
+                'quiz_category': {'type': 'General', 'id': '1'},
+                'previous_questions': []
+            })
+        self.assertEqual(response.status_code, 200)
 
-    """
-    TODO
-    Write at least one test for each test for successful operation and for expected errors.
-    """
+    def test_play_quize_failed(self):
+        """ Test play quiz failed"""
+        with self.app.app_context():
+            category = Category(type='General')
+            self.db.session.add(category)
+            self.db.session.commit()
+            response = self.client().post('/quizzes', json={
+                'previous_questions': []
+            })
+        self.assertEqual(response.status_code, 422)
 
 
-# Make the tests conveniently executable
 if __name__ == "__main__":
     unittest.main()
