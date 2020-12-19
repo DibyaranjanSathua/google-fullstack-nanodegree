@@ -13,4 +13,4 @@ DB_PASSWORD = os.getenv('DB_PASSWORD', 'password')
 DB_NAME = os.getenv('DB_NAME', 'fyyur')
 SQLALCHEMY_DATABASE_URI = f'postgres://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}'
 
-# SQLALCHEMY_DATABASE_URI = 'postgres://dibyaranjan@localhost:5432/fyyur'
+# SQLALCHEMY_DATABASE_URI = 'postgres://Renad@localhost:5432/fyyur'
