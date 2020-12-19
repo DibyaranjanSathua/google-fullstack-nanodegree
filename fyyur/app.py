@@ -4,7 +4,6 @@
 
 import json
 import dateutil.parser
-from datetime import datetime
 import babel
 from flask import Flask, render_template, request, Response, flash, redirect, url_for, abort
 from flask_moment import Moment
@@ -13,6 +12,7 @@ import logging
 from logging import Formatter, FileHandler
 from flask_wtf import CSRFProtect
 from flask_migrate import Migrate
+from models import Venue, VenuesGenres, Artist, ArtistsGenres, Show, db
 from forms import ShowForm, VenueForm, ArtistForm
 #----------------------------------------------------------------------------#
 # App Config.
@@ -23,7 +23,7 @@ app = Flask(__name__)
 csrf = CSRFProtect(app=app)
 moment = Moment(app)
 app.config.from_object('config')
-db = SQLAlchemy(app)
+db.init_app(app)
 
 migrate = Migrate(app, db)
 
@@ -32,126 +32,6 @@ migrate = Migrate(app, db)
 #----------------------------------------------------------------------------#
 
 
-class Venue(db.Model):
-    __tablename__ = 'Venue'
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String, nullable=False)
-    city = db.Column(db.String(120), nullable=False)
-    state = db.Column(db.String(120), nullable=False)
-    address = db.Column(db.String(120))
-    phone = db.Column(db.String(120))
-    image_link = db.Column(db.String(500))
-    facebook_link = db.Column(db.String(120))
-    website = db.Column(db.String(500))
-    seeking_talent = db.Column(db.Boolean, nullable=False, default=False)
-    seeking_description = db.Column(db.Text)
-    genres = db.relationship('VenuesGenres', backref='venue', lazy=True)
-    shows = db.relationship('Show', backref='venue', lazy=True)
-
-    @property
-    def upcoming_shows(self):
-        """ Return list of upcoming shows for the venue """
-        now = datetime.now()
-        all_show = Show.query.filter_by(venue_id=self.id).all()
-        upcoming_shows = [x for x in all_show if x.start_time >= now]
-        return upcoming_shows
-
-    @property
-    def past_shows(self):
-        """ Return list of past shows for the venue """
-        now = datetime.now()
-        all_show = Show.query.filter_by(venue_id=self.id).all()
-        past_shows = [x for x in all_show if x.start_time < now]
-        return past_shows
-
-    @property
-    def genres_list(self):
-        """ Return list of venue genres """
-        # genres = VenuesGenres.query.filter_by(venue_id=self.id).all()
-        return [x.genre for x in self.genres]
-
-
-class VenuesGenres(db.Model):
-    __tablename__ = 'VenuesGenres'
-
-    id = db.Column(db.Integer, primary_key=True)
-    venue_id = db.Column(db.Integer, db.ForeignKey('Venue.id'), nullable=False)
-    genre = db.Column(db.String(), nullable=False)
-
-    def __repr__(self):
-        return f'{self.__class__.__name__} [{self.id}, {self.genre}]'
-
-
-class Artist(db.Model):
-    __tablename__ = 'Artist'
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String, nullable=False)
-    city = db.Column(db.String(120), nullable=False)
-    state = db.Column(db.String(120), nullable=False)
-    phone = db.Column(db.String(120))
-    image_link = db.Column(db.String(500))
-    facebook_link = db.Column(db.String(120))
-    website = db.Column(db.String(120))
-    seeking_venue = db.Column(db.Boolean, nullable=False, default=False)
-    seeking_description = db.Column(db.Text)
-    genres = db.relationship('ArtistsGenres', backref='artist', lazy=True)
-    shows = db.relationship('Show', backref='artist', lazy=True)
-
-    def __repr__(self):
-        return f'{self.__class__.__name__} [{self.id}, {self.name}]'
-
-    def __str__(self):
-        return self.__repr__()
-
-    @property
-    def upcoming_shows(self):
-        """ Return list of upcoming shows for the venue """
-        now = datetime.now()
-        all_show = Show.query.filter_by(artist_id=self.id).all()
-        upcoming_shows = [x for x in all_show if x.start_time >= now]
-        return upcoming_shows
-
-    @property
-    def past_shows(self):
-        """ Return list of past shows for the venue """
-        now = datetime.now()
-        all_show = Show.query.filter_by(artist_id=self.id).all()
-        past_shows = [x for x in all_show if x.start_time < now]
-        return past_shows
-
-    @property
-    def genres_list(self):
-        """ Return list of venue genres """
-        # genres = ArtistsGenres.query.filter_by(artist_id=self.id).all()
-        return [x.genre for x in self.genres]
-
-
-class ArtistsGenres(db.Model):
-    __tablename__ = 'ArtistsGenres'
-
-    id = db.Column(db.Integer, primary_key=True)
-    artist_id = db.Column(db.Integer, db.ForeignKey('Artist.id'), nullable=False)
-    genre = db.Column(db.String(), nullable=False)
-
-    def __repr__(self):
-        return f'{self.__class__.__name__} [{self.id}, {self.genre}]'
-
-
-class Show(db.Model):
-    __tablename__ = 'Shows'
-
-    id = db.Column(db.Integer, primary_key=True)
-    venue_id = db.Column(db.Integer, db.ForeignKey('Venue.id'), nullable=False)
-    artist_id = db.Column(db.Integer, db.ForeignKey('Artist.id'), nullable=False)
-    start_time = db.Column(db.DateTime, nullable=False)
-
-    def __repr__(self):
-        return f'{self.__class__.__name__} [{self.id}, {self.venue_id}, {self.artist_id}]'
-
-    def __str__(self):
-        return self.__repr__()
 
 #----------------------------------------------------------------------------#
 # Filters.
@@ -184,6 +64,7 @@ def index():
 
 @app.route('/venues')
 def venues():
+    """ Get all venues """
     data = []
     all_venues = Venue.query.all()
     unique_locations = set([(x.city, x.state) for x in all_venues])
@@ -209,10 +90,11 @@ def venues():
 
 @app.route('/venues/search', methods=['POST'])
 def search_venues():
+    """ Search for a venue using search_term """
     search_term = request.form.get('search_term')
     # Reference: https://stackoverflow.com/questions/3325467/sqlalchemy-equivalent-to-sql-like-statement
     # Get all venues using LIKE sql statement
-    venues = Venue.query.filter(Venue.name.like(f'%{search_term}%')).all()
+    venues = Venue.query.filter(Venue.name.ilike(f'%{search_term}%')).all()
     data = [
         {
             'id': x.id,
@@ -234,6 +116,7 @@ def search_venues():
 
 @app.route('/venues/<int:venue_id>')
 def show_venue(venue_id):
+    """ Show a venue by id """
     venue = Venue.query.get(venue_id)
     # Upcoming show details
     upcoming_shows_details = [
@@ -284,12 +167,14 @@ def show_venue(venue_id):
 
 @app.route('/venues/create', methods=['GET'])
 def create_venue_form():
+    """ Venue create form """
     form = VenueForm()
     return render_template('forms/new_venue.html', form=form)
 
 
 @app.route('/venues/create', methods=['POST'])
 def create_venue_submission():
+    """ Submit callback for venue create form  """
     # Get the form data
     name = request.form['name']
     city = request.form['city']
@@ -352,6 +237,7 @@ def create_venue_submission():
 
 @app.route('/venues/<venue_id>', methods=['DELETE'])
 def delete_venue(venue_id):
+    """ Delete a venue by id """
     # BONUS CHALLENGE: Implement a button to delete a Venue on a Venue Page, have it so that
     # clicking that button delete it from the db then redirect the user to the homepage
     error = False
@@ -376,6 +262,7 @@ def delete_venue(venue_id):
 
 @app.route('/artists')
 def artists():
+    """ Get all artists """
     artists = Artist.query.all()
     data = [
         {
@@ -389,10 +276,11 @@ def artists():
 
 @app.route('/artists/search', methods=['POST'])
 def search_artists():
+    """ Search for artist using search_term """
     search_term = request.form.get('search_term')
     # Reference: https://stackoverflow.com/questions/3325467/sqlalchemy-equivalent-to-sql-like-statement
     # Get all venues using LIKE sql statement
-    artists = Artist.query.filter(Artist.name.like(f'%{search_term}%')).all()
+    artists = Artist.query.filter(Artist.name.ilike(f'%{search_term}%')).all()
     data = [
         {
             'id': x.id,
@@ -414,6 +302,7 @@ def search_artists():
 
 @app.route('/artists/<int:artist_id>')
 def show_artist(artist_id):
+    """ Get a artist by id """
     artist = Artist.query.get(artist_id)
     # Upcoming show details
     upcoming_shows_details = [
@@ -463,6 +352,7 @@ def show_artist(artist_id):
 
 @app.route('/artists/<int:artist_id>/edit', methods=['GET'])
 def edit_artist(artist_id):
+    """ Edit a Artist """
     form = ArtistForm()
     artist = Artist.query.get(artist_id)
 
@@ -482,6 +372,7 @@ def edit_artist(artist_id):
 
 @app.route('/artists/<int:artist_id>/edit', methods=['POST'])
 def edit_artist_submission(artist_id):
+    """ Submit call back for edit artist form """
     # Get form data
     name = request.form['name']
     city = request.form['city']
@@ -544,6 +435,7 @@ def edit_artist_submission(artist_id):
 
 @app.route('/venues/<int:venue_id>/edit', methods=['GET'])
 def edit_venue(venue_id):
+    """ Venue edit form """
     form = VenueForm()
     venue = Venue.query.get(venue_id)
     # Pre-populate form fields
@@ -563,6 +455,7 @@ def edit_venue(venue_id):
 
 @app.route('/venues/<int:venue_id>/edit', methods=['POST'])
 def edit_venue_submission(venue_id):
+    """ Submit callback for edit venue form """
     # Get the form data
     name = request.form['name']
     city = request.form['city']
@@ -630,12 +523,14 @@ def edit_venue_submission(venue_id):
 
 @app.route('/artists/create', methods=['GET'])
 def create_artist_form():
+    """ Create artists """
     form = ArtistForm()
     return render_template('forms/new_artist.html', form=form)
 
 
 @app.route('/artists/create', methods=['POST'])
 def create_artist_submission():
+    """ Submit callback for create artists form """
     # Get form data
     name = request.form['name']
     city = request.form['city']
@@ -698,6 +593,7 @@ def create_artist_submission():
 
 @app.route('/shows')
 def shows():
+    """ Get all shows """
     shows = Show.query.all()
     data = [
         {
@@ -715,12 +611,14 @@ def shows():
 
 @app.route('/shows/create')
 def create_shows():
+    """ Create show form """
     form = ShowForm()
     return render_template('forms/new_show.html', form=form)
 
 
 @app.route('/shows/create', methods=['POST'])
 def create_show_submission():
+    """ Submit callback for show form """
     # Get the form data
     artist_id = request.form['artist_id']
     venue_id = request.form['venue_id']
