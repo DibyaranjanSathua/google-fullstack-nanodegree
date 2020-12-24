@@ -92,14 +92,14 @@ def create_app(test_config=None):
         if question is None or answer is None or difficulty is None or category is None:
             abort(400)
 
-        category_type = Category.query.get(int(category))
+        category = int(category)
 
         try:
             # Create a question instance
             question = Question(
                 question=question,
                 answer=answer,
-                category=category_type.type,
+                category=category,
                 difficulty=difficulty
             )
             question.insert()
@@ -135,7 +135,7 @@ def create_app(test_config=None):
 
         questions = [
             x.format()
-            for x in Question.query.filter(Question.category == category.type).all()
+            for x in Question.query.filter(Question.category == category_id).all()
         ]
         # Return json response
         return jsonify({
@@ -162,7 +162,7 @@ def create_app(test_config=None):
         if category['type'] == 'click':
             questions = Question.query.all()
         else:
-            questions = Question.query.filter(Question.category == category['type']).all()
+            questions = Question.query.filter(Question.category == category['id']).all()
 
         new_questions = [x for x in questions if x.id not in previous_questions]
         next_question = random.choice(new_questions).format() if new_questions else None

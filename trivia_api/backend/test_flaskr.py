@@ -33,7 +33,6 @@ class TriviaTestCase(unittest.TestCase):
         """ Test GET request to categories """
         response = self.client().get('/categories')
         data = json.loads(response.data)
-
         self.assertEqual(response.status_code, 200)
 
     def test_post_categories(self):
@@ -50,16 +49,6 @@ class TriviaTestCase(unittest.TestCase):
 
     def test_get_questions(self):
         """ Test GET request to get questions """
-        with self.app.app_context():
-            question = Question(
-                question="What is your name",
-                answer="Renad",
-                category="General",
-                difficulty=1
-            )
-            self.db.session.add(question)
-            self.db.session.commit()
-
         response = self.client().get('/questions')
         data = json.loads(response.data)
         self.assertEqual(response.status_code, 200)
@@ -70,7 +59,7 @@ class TriviaTestCase(unittest.TestCase):
             question = Question(
                 question="What is your name",
                 answer="Renad",
-                category="General",
+                category=1,
                 difficulty=1
             )
             self.db.session.add(question)
@@ -85,8 +74,8 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data, expected_data)
 
     def test_delete_invalid_question(self):
-        """ Test delete question """
-        response = self.client().delete('/questions/10')
+        """ Test delete invalid question """
+        response = self.client().delete('/questions/100')
         data = json.loads(response.data)
         self.assertEqual(response.status_code, 404)
 
@@ -100,7 +89,7 @@ class TriviaTestCase(unittest.TestCase):
                 'question': 'Whats your name',
                 'answer': 'Renad',
                 'difficulty': 1,
-                'category': '1'
+                'category': 1
             })
         self.assertEqual(response.status_code, 200)
 
@@ -112,45 +101,34 @@ class TriviaTestCase(unittest.TestCase):
             self.db.session.commit()
             response = self.client().post('/questions', json={
                 'question': 'Whats your name',
-                'category': '1'
+                'category': 1
             })
         self.assertEqual(response.status_code, 400)
 
     def test_search_questions(self):
         """ Test search questions """
-        with self.app.app_context():
-            question = Question(
-                question="What is your name",
-                answer="Renad",
-                category="General",
-                difficulty=1
-            )
-            self.db.session.add(question)
-            self.db.session.commit()
-            response = self.client().post('/questions/search', json={'searchTerm': 'name'})
+        response = self.client().post('/questions/search', json={'searchTerm': 'autobiography'})
+        data = json.loads(response.data)
+        expected_data = {
+            'current_category': None,
+            'questions': [
+                {'answer': 'Maya Angelou', 'category': 4, 'difficulty': 2, 'id': 5,
+                 'question': "Whose autobiography is entitled 'I Know Why the Caged Bird Sings'?"}
+            ],
+            'success': True,
+            'total_questions': 1
+        }
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(data, expected_data)
 
     def test_search_questions_invalid(self):
         """ Test search questions """
-        with self.app.app_context():
-            question = Question(
-                question="What is your name",
-                answer="Renad",
-                category="General",
-                difficulty=1
-            )
-            self.db.session.add(question)
-            self.db.session.commit()
-            response = self.client().post('/questions/search', json={'other_filed': 'value'})
+        response = self.client().post('/questions/search', json={'other_filed': 'value'})
         self.assertEqual(response.status_code, 422)
 
     def test_get_category_questions(self):
         """ Test Get category questions """
-        with self.app.app_context():
-            category = Category(type='General')
-            self.db.session.add(category)
-            self.db.session.commit()
-            response = self.client().get('/categories/1/questions')
+        response = self.client().get('/categories/1/questions')
         self.assertEqual(response.status_code, 200)
 
     def test_get_category_questions_no_category(self):
@@ -160,25 +138,17 @@ class TriviaTestCase(unittest.TestCase):
 
     def test_play_quize(self):
         """ Test play quiz """
-        with self.app.app_context():
-            category = Category(type='General')
-            self.db.session.add(category)
-            self.db.session.commit()
-            response = self.client().post('/quizzes', json={
-                'quiz_category': {'type': 'General', 'id': '1'},
-                'previous_questions': []
-            })
+        response = self.client().post('/quizzes', json={
+            'quiz_category': {'type': 'General', 'id': '1'},
+            'previous_questions': []
+        })
         self.assertEqual(response.status_code, 200)
 
     def test_play_quize_failed(self):
         """ Test play quiz failed"""
-        with self.app.app_context():
-            category = Category(type='General')
-            self.db.session.add(category)
-            self.db.session.commit()
-            response = self.client().post('/quizzes', json={
-                'previous_questions': []
-            })
+        response = self.client().post('/quizzes', json={
+            'previous_questions': []
+        })
         self.assertEqual(response.status_code, 422)
 
 
